@@ -37,6 +37,18 @@ from stereovision.point_cloud import PointCloud
 WIDTH=1296
 HEIGHT=972
 
+OPENCV=1
+PICAM2=2
+STREAM=3
+
+def doubleWidth(img):
+    width = 440
+    height = img.shape[0] # keep original height
+    dim = (width, height)
+    
+    # resize image
+    return cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+
 class StereoPair(object):
 
     """
@@ -51,7 +63,10 @@ class StereoPair(object):
     #: Window names for showing captured frame from each camera
     windows = ["{} camera".format(side) for side in ("Left", "Right")]
 
-    def __init__(self, devices):
+    def __init__(self, devices, width, height, mode=OPENCV, read_stream=None):
+        self.read_stream=read_stream
+        self.mode=mode
+        self.size=(width,height)
         """
         Initialize cameras.
 
@@ -72,14 +87,23 @@ class StereoPair(object):
 
         if devices[0] != devices[1]:
             #: Video captures associated with the ``StereoPair``
-            self.captures = [Picamera2(device) for device in devices]
+            if self.mode==OPENCV:
+                self.captures = [cv2.VideoCapture(device) for device in devices]
+            elif self.mode==PICAM2:
+                self.captures = [Picamera2(device) for device in devices]
         else:
             # Stereo images come from a single device, as single image
-            self.captures = [Picamera2(devices[0])]
+            if self.mode==OPENCV:
+                self.captures = [cv2.VideoCapture(devices[0])]
+            elif self.mode==PICAM2:
+                self.captures = [Picamera2(devices[0])]
             self.get_frames = self.get_frames_singleimage
-        for c in self.captures:
-            c.configure(c.create_video_configuration({"size":(WIDTH,HEIGHT),"format": "RGB888"}))
-            c.start()
+        if self.mode==PICAM2:
+            for c in self.captures:
+                c.configure(c.create_video_configuration({"size":self.size,"format": "RGB888"}))
+                c.start()
+        if self.mode==STREAM:
+            self.get_frames=self.get_stream_frame
 
     def __enter__(self):
         return self
@@ -89,45 +113,32 @@ class StereoPair(object):
             capture.stop()
         for window in self.windows:
             cv2.destroyWindow(window)
-
+    def get_stream_frame(self):
+        return self.read_stream()
     def get_frames(self):
         """Get current frames from cameras."""
-        frames=[]
-        for c in self.captures:
-            # yuv420 = c.capture_array()
-            # frames.append(cv2.cvtColor(yuv420, cv2.COLOR_YUV420p2RGB))
-            frames.append(c.capture_array())
-        return frames
+        if self.mode==OPENCV:
+            return [capture.read()[1] for capture in self.captures]
+        elif self.mode==PICAM2:
+            frames=[]
+            for c in self.captures:
+                    frames.append(doubleWidth(c.capture_array()))
+            return frames
 
     def get_frames_singleimage(self):
         """
         Get current left and right frames from a single image,
         by splitting the image in half.
         """
-        # yuv420 = self.captures[0].capture_array()
-        # frame = cv2.cvtColor(yuv420, cv2.COLOR_YUV420p2RGB)
-        frame=self.captures[0].capture_array()
-        # print(frame.shape)
-        # frame = self.captures[0].read()[1]
+        if self.mode==OPENCV:
+            frame = self.captures[0].read()[1]
+        elif self.mode==PICAM2:
+            frame=doubleWidth(self.captures[0].capture_array())
         height, width, colors = frame.shape
         left_frame = frame[:, :int(width / 2), :]
         right_frame = frame[:, int(width / 2):, :]
         return [left_frame, right_frame]
 
-    # def get_frames(self):
-    #     """Get current frames from cameras."""
-    #     return [capture.read()[1] for capture in self.captures]
-
-    # def get_frames_singleimage(self):
-    #     """
-    #     Get current left and right frames from a single image,
-    #     by splitting the image in half.
-    #     """
-    #     frame = self.captures[0].read()[1]
-    #     height, width, colors = frame.shape
-    #     left_frame = frame[:, :int(width / 2), :]
-    #     right_frame = frame[:, int(width / 2):, :]
-    #     return [left_frame, right_frame]
 
     def show_frames(self, wait=0):
         """

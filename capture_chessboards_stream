@@ -43,10 +43,10 @@ PROGRAM_DESCRIPTION=(
 def main():
     parser = ArgumentParser(description=PROGRAM_DESCRIPTION,
                            parents=[CHESSBOARD_ARGUMENTS])
-    parser.add_argument("left", metavar="left", type=int,
-                        help="Device numbers for the left camera.")
-    parser.add_argument("right", metavar="right", type=int,
-                        help="Device numbers for the right camera.")
+    # parser.add_argument("left", metavar="left", type=int,
+    #                     help="Device numbers for the left camera.")
+    # parser.add_argument("right", metavar="right", type=int,
+    #                     help="Device numbers for the right camera.")
     parser.add_argument("num_pictures", type=int, help="Number of valid "
                         "chessboard pictures that should be taken.")
     parser.add_argument("output_folder", help="Folder to save the images to.")
