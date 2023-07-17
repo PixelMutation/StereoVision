@@ -1,4 +1,4 @@
-#!/bin/python
+#!/bin/python3
 # Copyright (C) 2014 Daniel Lee <lee.daniel.1986@gmail.com>
 #
 # This file is part of StereoVision.
@@ -138,8 +138,8 @@ def enforce_delay(pair, delay):
         text_y = (frames[0].shape[0] + text_size[1]) / 2
 
         for frame, window in zip(frames, pair.windows):
-            cv2.putText(frame, time_remaining, (text_x, text_y), font, font_scale, (255, 50, 50),
-                        line_thickness, line_type)
+            # cv2.putText(frame, time_remaining, (text_x, text_y), font, font_scale, (255, 50, 50),
+            #             line_thickness, line_type)
             cv2.imshow(window, frame)
 
         cv2.waitKey(1)
